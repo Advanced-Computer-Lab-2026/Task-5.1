@@ -17,10 +17,22 @@ const instructorSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-// Hash on save(). Not triggered by insertMany/updateOne/findOneAndUpdate.
+// Hash for save()/create().
 instructorSchema.pre('save', async function () {
   if (!this.isModified('password')) return;
   this.password = await bcrypt.hash(this.password, 12);
+});
+
+// Hash for insertMany(), which is what the old seed uses.
+instructorSchema.pre('insertMany', async function (next, docs) {
+  try {
+    for (const doc of docs) {
+      if (doc.password) doc.password = await bcrypt.hash(doc.password, 12);
+    }
+    next();
+  } catch (err) {
+    next(err);
+  }
 });
 
 instructorSchema.methods.verifyPassword = function (plain) {

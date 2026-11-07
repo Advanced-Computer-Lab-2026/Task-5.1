@@ -18,14 +18,10 @@ export async function loginInstructor(req, res, next) {
   try {
     const { username, password } = req.validated; // plain strings, guaranteed by Joi
 
-    // Look up by username only; the password is checked against the hash.
     const instructor = await Instructor.findOne({ username }).select('+password');
     const ok = instructor && (await instructor.verifyPassword(password));
 
-    if (!ok) {
-      // Same response for unknown user and wrong password.
-      return res.status(401).json({ message: 'Invalid credentials' });
-    }
+    if (!ok) return res.status(401).json({ message: 'Invalid credentials' });
     return res.json({ instructor: ownProfile(instructor) });
   } catch (err) {
     next(err);
@@ -50,7 +46,6 @@ export async function searchInstructors(req, res, next) {
   try {
     const { name, department } = req.validated;
 
-    // Build the filter explicitly; nothing from the request is used as a filter object.
     const filter = {};
     if (name) filter.name = { $regex: escapeRegex(name), $options: 'i' };
     if (department) filter.department = department;
