@@ -1,6 +1,7 @@
 import express from 'express';
 import morgan from 'morgan';
 import cors from 'cors';
+import mongoSanitize from 'express-mongo-sanitize';
 import authRoutes from './routes/auth.js';
 import reviewRoutes from './routes/reviews.js';
 import userRoutes from './routes/users.js';
@@ -11,6 +12,9 @@ const app = express();
 app.use(morgan('dev'));
 app.use(cors({ origin: 'http://localhost:5175', credentials: false }));
 app.use(express.json());
+// Strip MongoDB operators from untrusted body, params, and query input before
+// any route handler can use it.
+app.use(mongoSanitize());
 
 app.get('/api/health', (req, res) => res.json({ ok: true }));
 
