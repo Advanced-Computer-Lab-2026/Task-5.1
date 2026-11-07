@@ -1,4 +1,6 @@
 import { Instructor } from '../models/Instructor.js';
+import Joi from 'joi';
+
 
 // =============================================================================
 //  INSTRUCTOR PORTAL CONTROLLER  —  ⚠️ INTENTIONALLY VULNERABLE (security lab)
@@ -13,6 +15,20 @@ import { Instructor } from '../models/Instructor.js';
 //
 // This is the bug students must find and fix. Do not "clean this up".
 // =============================================================================
+
+
+
+const loginSchema = Joi.object({
+  username: Joi.string().required().min(2).max(50),
+  password: Joi.string().required()
+});
+
+
+const searchSchema = Joi.object({
+  name: Joi.string().max(100).min(1),
+  department: Joi.string().max(100).min(1)
+}).options({ stripUnknown: true });   
+
 
 function publicProfile(doc) {
   // A successful login is a "trophy": we deliberately return the sensitive
@@ -32,10 +48,9 @@ function publicProfile(doc) {
 // POST /api/instructors/login
 export async function loginInstructor(req, res, next) {
   try {
-    const { username, password } = req.body;
-    if (username === undefined || password === undefined) {
-      return res.status(400).json({ message: 'username and password are required' });
-    }
+    const { value, error } = loginSchema.validate(req.body);
+if (error) return res.status(400).json({ message: error.message });
+    
 
     // ⚠️ VULNERABLE (NoSQL injection): `username` and `password` are placed
     // directly into the query. Honest clients send strings, but a crafted body
@@ -43,16 +58,15 @@ export async function loginInstructor(req, res, next) {
     // filter that matches any account (authentication bypass). With
     // {"password":{"$regex":"^S"}} the success/failure response becomes an
     // oracle for extracting the stored password one character at a time.
-    const instructor = await Instructor.findOne({ username, password });
-
-    if (!instructor) {
-      return res.status(401).json({ message: 'Invalid credentials' });
-    }
+const instructor = await Instructor.findOne({ username: value.username }).select('+password');
+if (!instructor) return res.status(401).json({ message: 'Invalid credentials' });
+const ok = await instructor.comparePassword(value.password);
+if (!ok) return res.status(401).json({ message: 'Invalid credentials' });
     return res.json({ instructor: publicProfile(instructor) });
   } catch (err) {
     next(err);
-  }
-}
+  }}
+
 
 // GET /api/instructors
 // Public directory. Deliberately limited fields so the contrast with the
@@ -79,7 +93,9 @@ export async function searchInstructors(req, res, next) {
     //   ?role[$ne]=instructor           -> operator injection, leaks superadmin
     //   ?username[$regex]=^admin        -> regex enumeration
     //   ?$where=this.password.length>10 -> server-side JavaScript execution
-    const filter = req.query;
+    const { value, error } = searchSchema.validate(req.query);
+if (error) return res.status(400).json({ message: error.message });
+    const filter = value;
     const instructors = await Instructor.find(filter).lean();
     res.json({ count: instructors.length, instructors });
   } catch (err) {
