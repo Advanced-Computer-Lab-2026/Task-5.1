@@ -1,51 +1,68 @@
-import mongoose from 'mongoose';
-import bcrypt from 'bcryptjs';
-import { Instructor } from '../models/Instructor.js';
-import { connectDB } from '../config/db.js';
 
-// Instructor data
+import dotenv from 'dotenv';
+dotenv.config();
+
+import mongoose from 'mongoose';
+import { connectDB } from '../config/db.js';
+import { Instructor } from '../models/Instructor.js';
+
 const instructors = [
   {
-    name: 'John Smith',
+    name: 'Prof. Alice Smith',
     username: 'prof.smith',
     password: 'password123',
-    department: 'Computer Science',
+    department: 'CS',
     role: 'instructor',
-    apiKey: 'example-key-1',
-    privateEmail: 'smith@example.com',
-    privatePhone: '01000000001'
+    privateEmail: 'alice.smith@university.edu',
+    privatePhone: '+1-555-0101'
   },
   {
-    name: 'Jane Wilson',
-    username: 'prof.wilson',
-    password: 'password456',
-    department: 'Mathematics',
+    name: 'Prof. Brian Jones',
+    username: 'prof.jones',
+    password: 'mathRules!',
+    department: 'Math',
     role: 'instructor',
-    apiKey: 'example-key-2',
-    privateEmail: 'wilson@example.com',
-    privatePhone: '01000000002'
+    privateEmail: 'brian.jones@university.edu',
+    privatePhone: '+1-555-0102'
+  },
+  {
+    name: 'Prof. Chen Lee',
+    username: 'prof.lee',
+    password: 'linalg2024',
+    department: 'Math',
+    role: 'instructor',
+    privateEmail: 'chen.lee@university.edu',
+    privatePhone: '+1-555-0103'
+  },
+  {
+    name: 'Portal Administrator',
+    username: 'admin',
+    password: 'S3cr3t-Admin-Pw!',
+    department: 'IT',
+    role: 'superadmin',
+    apiKey: 'sk_live_9f3b2c7d8e4a1b6f0d5c2a9e',
+    privateEmail: 'root@university.edu',
+    privatePhone: '+1-555-0000'
   }
 ];
 
 async function run() {
   try {
-    // Connect to MongoDB
     await connectDB();
 
-    // Remove existing instructors
+    // WARNING: Deletes all instructors in the connected database
     await Instructor.deleteMany({});
 
-    // Hash passwords before inserting instructors
-    for (const instructor of instructors) {
-      instructor.password = await bcrypt.hash(instructor.password, 12);
+    // create() runs the password-hashing middleware
+    const created = await Instructor.create(instructors);
+
+    console.log(`Seeded ${created.length} instructor(s):`);
+
+    for (const instructor of created) {
+      console.log(`  - ${instructor.username} (${instructor.role})`);
     }
-
-    // Insert instructors with hashed passwords
-    const created = await Instructor.insertMany(instructors);
-
-    console.log(`Seeded ${created.length} instructor(s)`);
-  } catch (error) {
-    console.error('Error seeding instructors:', error);
+  } catch (err) {
+    console.error('Seed failed:', err);
     process.exitCode = 1;
   } finally {
     await mongoose.disconnect();
