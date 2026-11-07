@@ -27,3 +27,4 @@ Thumbs.db
 # Server-side specific ignores (if server is in a subfolder)
 server/node_modules/
 server/build/
+server/.local-demo/
