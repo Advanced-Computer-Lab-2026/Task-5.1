@@ -2,10 +2,9 @@ import dotenv from 'dotenv';
 dotenv.config();
 import mongoose from 'mongoose';
 import { connectDB } from '../config/db.js';
-import { Instructor } from '../models/Instructor.js';
+import { Instructor, hashInstructorPassword } from '../models/Instructor.js';
 
-// Seed data for the Instructor Portal NoSQL injection lab.
-// Passwords are plaintext ON PURPOSE (see Instructor model / Flow.md).
+// Demo credentials for the Instructor Portal lab.
 const instructors = [
   {
     name: 'Prof. Alice Smith',
@@ -47,20 +46,49 @@ const instructors = [
   }
 ];
 
-async function run() {
-  await connectDB();
+async function seed() {
   await Instructor.deleteMany({});
-  const created = await Instructor.insertMany(instructors);
+  const created = await Instructor.create(instructors);
   console.log(`Seeded ${created.length} instructor(s):`);
   for (const i of created) {
     console.log(`  - ${i.username} (${i.role})`);
   }
-  await mongoose.disconnect();
-  console.log('Done.');
-  process.exit(0);
 }
 
-run().catch((err) => {
-  console.error('Seed failed:', err);
-  process.exit(1);
+async function migratePasswords() {
+  const pending = { passwordHashed: { $ne: true } };
+  const accounts = Instructor.find(pending).select('_id +password').lean().cursor();
+  let migrated = 0;
+
+  for await (const { _id, password } of accounts) {
+    const hash = await hashInstructorPassword(password);
+    const { modifiedCount } = await Instructor.updateOne(
+      { ...pending, _id, password },
+      { $set: { password: hash, passwordHashed: true } }
+    );
+    migrated += modifiedCount;
+  }
+  console.log(`Migrated ${migrated} instructor password(s).`);
+}
+
+async function run() {
+  const [option] = process.argv.slice(2);
+  if (option !== undefined && option !== '--migrate') {
+    throw new Error('Unknown instructor setup option');
+  }
+  await connectDB();
+  try {
+    if (option === '--migrate') {
+      await migratePasswords();
+    } else {
+      await seed();
+    }
+  } finally {
+    await mongoose.disconnect();
+  }
+}
+
+run().catch(() => {
+  console.error('Instructor setup failed.');
+  process.exitCode = 1;
 });
