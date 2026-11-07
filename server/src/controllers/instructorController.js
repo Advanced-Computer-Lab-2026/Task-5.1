@@ -25,6 +25,7 @@ export async function loginInstructor(req, res, next) {
       passwordHashed: true
     }).select(`${directoryFields} username +password`);
 
+    // Verify the submitted password in bcrypt so it never enters the database filter.
     if (!instructor || !(await instructor.comparePassword(value.password))) {
       return res.status(401).json({ message: 'Invalid credentials' });
     }
