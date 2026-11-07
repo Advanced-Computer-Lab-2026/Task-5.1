@@ -8,12 +8,12 @@ const loginSchema = Joi.object({
   password: Joi.string().min(1).max(100).required()
 });
 
-// Only these fields are searchable; at least one is required, so an empty
-// query (e.g. what's left after "$where" is stripped) is rejected.
+// Only these fields are searchable. Any other key (role, username, $where, ...)
+// is stripped by stripUnknown when we validate, so it can never reach the query.
 const searchSchema = Joi.object({
   name: Joi.string().trim().min(1).max(50),
   department: Joi.string().trim().min(1).max(50)
-}).or('name', 'department');
+});
 
 // Treat user input as literal text inside a regex.
 function escapeRegex(str) {
@@ -66,7 +66,9 @@ export async function getDirectory(req, res, next) {
 // GET /api/instructors/search
 export async function searchInstructors(req, res, next) {
   try {
-    const { value, error } = searchSchema.validate(req.query);
+    // stripUnknown silently drops anything that isn't name/department.
+    // A wrong type for name/department (e.g. an object) is still a 400.
+    const { value, error } = searchSchema.validate(req.query, { stripUnknown: true });
     if (error) return res.status(400).json({ message: 'Invalid input' });
 
     // Build the filter ourselves; never pass req.query to find().
@@ -78,6 +80,7 @@ export async function searchInstructors(req, res, next) {
       filter.department = { $regex: escapeRegex(value.department), $options: 'i' };
     }
 
+    // .select() guarantees no secret field can ever be returned.
     const instructors = await Instructor.find(filter)
       .select('name department role')
       .lean();
