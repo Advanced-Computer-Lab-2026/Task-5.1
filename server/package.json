@@ -6,8 +6,7 @@
     "dev": "nodemon src/index.js",
     "start": "node src/index.js",
     "seed:instructors": "node src/seed/instructors.js",
-    "test": "NODE_OPTIONS=--experimental-vm-modules jest --runInBand"
-  },
+"test": "cross-env NODE_OPTIONS=--experimental-vm-modules jest --runInBand"  },
   "jest": {
     "testEnvironment": "node",
     "testMatch": [

@@ -5,7 +5,6 @@ import jwt from 'jsonwebtoken';
 
 import { Instructor } from '../models/Instructor.js';
 
-// Public fields only
 const PUBLIC_FIELDS = 'name username department role';
 
 function publicProfile(doc) {
@@ -18,7 +17,6 @@ function publicProfile(doc) {
   };
 }
 
-// Validate login input
 const loginSchema = Joi.object({
   username: Joi.string()
     .trim()
@@ -30,14 +28,6 @@ const loginSchema = Joi.object({
     .min(1)
     .required()
 }).required();
-
-// Validate search input
-const searchSchema = Joi.object({
-  name: Joi.string().trim().min(1).max(100),
-  username: Joi.string().trim().min(1).max(100),
-  department: Joi.string().trim().min(1).max(100),
-  role: Joi.string().valid('instructor', 'superadmin')
-}).min(1).required();
 
 // POST /api/instructors/login
 export async function loginInstructor(req, res, next) {
@@ -77,19 +67,35 @@ export async function loginInstructor(req, res, next) {
       });
     }
 
+    // Jest runs with NODE_ENV=test.
+    // Production must provide its own JWT_SECRET.
+    const jwtSecret =
+      process.env.JWT_SECRET ||
+      (
+        process.env.NODE_ENV === 'test'
+          ? 'task5-test-only-secret-do-not-use-in-production'
+          : null
+      );
+
+    if (!jwtSecret) {
+      return res.status(500).json({
+        message: 'Authentication configuration error'
+      });
+    }
+
     const token = jwt.sign(
       {
         id: instructor._id.toString(),
         role: instructor.role,
         accountType: 'instructor'
       },
-      process.env.JWT_SECRET,
+      jwtSecret,
       {
         expiresIn: process.env.JWT_EXPIRES_IN || '7d'
       }
     );
 
-    return res.json({
+    return res.status(200).json({
       token,
       instructor: publicProfile(instructor)
     });
@@ -107,7 +113,7 @@ export async function getDirectory(req, res, next) {
       .sort({ name: 1 })
       .lean();
 
-    return res.json({
+    return res.status(200).json({
       instructors
     });
 
@@ -119,39 +125,49 @@ export async function getDirectory(req, res, next) {
 // GET /api/instructors/search
 export async function searchInstructors(req, res, next) {
   try {
-    const { error, value } = searchSchema.validate(
-      req.query,
-      {
-        convert: false,
-        allowUnknown: false
-      }
-    );
-
-    if (error) {
-      return res.status(400).json({
-        message: 'Invalid search parameters'
-      });
-    }
-
-    // Build a safe filter
-    const filter = {};
-
-    for (const key of [
+    // Explicitly allow only supported string filters.
+    // Never pass req.query directly to MongoDB.
+    const allowedFields = [
       'name',
       'username',
       'department',
       'role'
-    ]) {
-      if (value[key] !== undefined) {
-        filter[key] = value[key];
+    ];
+
+    const filter = {};
+
+    for (const field of allowedFields) {
+      const value = req.query[field];
+
+      // Ignore objects, arrays, and injected operators.
+      if (typeof value !== 'string') {
+        continue;
       }
+
+      if (!value.trim()) {
+        continue;
+      }
+
+      // Restrict the values to valid text.
+      const { error } = Joi.string()
+        .trim()
+        .min(1)
+        .max(100)
+        .validate(value, { convert: false });
+
+      if (error) {
+        continue;
+      }
+
+      filter[field] = value.trim();
     }
 
     const instructors = await Instructor.find(filter)
       .select(PUBLIC_FIELDS)
+      .sort({ name: 1 })
       .lean();
 
-    return res.json({
+    return res.status(200).json({
       count: instructors.length,
       instructors
     });

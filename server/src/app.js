@@ -12,6 +12,7 @@ import instructorRoutes from './routes/instructors.js';
 const app = express();
 
 app.use(morgan('dev'));
+
 app.use(cors({
   origin: 'http://localhost:5175',
   credentials: false
@@ -19,24 +20,29 @@ app.use(cors({
 
 app.use(express.json());
 
-// Reject MongoDB injection operators
+// Sanitize requests instead of returning HTTP 400.
+// MongoDB operators are removed before controllers run.
 app.use((req, res, next) => {
   try {
-    if (
-      mongoSanitize.has(req.body || {}) ||
-      mongoSanitize.has(req.query || {}) ||
-      mongoSanitize.has(req.params || {})
-    ) {
-      return res.status(400).json({
-        message: 'Invalid request parameters'
+    if (req.body && typeof req.body === 'object') {
+      req.body = mongoSanitize.sanitize(req.body);
+    }
+
+    if (req.query && typeof req.query === 'object') {
+      const safeQuery = mongoSanitize.sanitize(
+        structuredClone(req.query)
+      );
+
+      Object.defineProperty(req, 'query', {
+        configurable: true,
+        enumerable: true,
+        value: safeQuery
       });
     }
 
     next();
   } catch (error) {
-    return res.status(400).json({
-      message: 'Invalid request'
-    });
+    next(error);
   }
 });
 
