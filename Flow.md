@@ -11,6 +11,10 @@ Review Board and, step by step, *why* each attack works. You will:
 > Primary tool: **Postman**. If you have `curl` installed, an equivalent command
 > is given for every step — pick whichever you have.
 
+The attack results below describe the intentionally vulnerable starting point.
+After applying the security fixes, see section 7 for the expected rejection of
+each request.
+
 The target endpoints live under `http://localhost:4000/api/instructors`.
 
 ---
@@ -232,3 +236,32 @@ Open the Instructor Portal in the web app (`/portal`) and watch the requests in
 your browser's Network tab. The real forms only ever send plain strings — the
 vulnerability is reached by **tampering the request**, not by the app itself.
 That is exactly how these bugs are exploited in the real world.
+
+---
+
+## 7. After the security fixes
+
+Re-seed the accounts after updating the server so existing plaintext seed
+passwords are replaced with bcrypt hashes:
+
+```
+npm run seed:instructors --workspace server
+```
+
+With the fixed server:
+
+- Joi enforces the expected field types and search allow-list; the
+  `express-mongo-sanitize` middleware strips MongoDB operator/dotted keys and
+  rejects requests where it had to sanitize input. Search filters are then
+  built only from the validated fields.
+- The normal `admin` login with an incorrect password returns `401 Invalid
+  credentials`; the correct password returns only `id`, `name`, `username`,
+  `department`, and `role`.
+- A normal name search such as `?name=Smith` still works and returns only
+  `name`, `department`, and `role`.
+- Attacks 1 and 3 (operator objects in the login body), attack 2
+  (`role[$ne]`), and attack 4 (`$where`) return `400 Invalid request` before a
+  database query is made.
+- Search parameters outside the public allow-list are rejected. The directory
+  and search results never include passwords, API keys, or private contact
+  information.
