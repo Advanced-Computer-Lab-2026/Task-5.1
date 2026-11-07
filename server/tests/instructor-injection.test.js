@@ -80,10 +80,7 @@ describe('Attack 2: operator injection on /search leaks secrets', () => {
       .get('/api/instructors/search')
       .query({ 'role[$ne]': 'instructor' });
 
-    expect(res.status).toBe(200);
-    const instructors = res.body.instructors || [];
-    const leaked = instructors.filter(leaksSecret);
-    expect(leaked).toEqual([]);
+    expect(res.status).toBe(400);
   });
 
   test('?username[$regex]=^admin returns no secret fields', async () => {
@@ -91,9 +88,7 @@ describe('Attack 2: operator injection on /search leaks secrets', () => {
       .get('/api/instructors/search')
       .query({ 'username[$regex]': '^admin' });
 
-    expect(res.status).toBe(200);
-    const instructors = res.body.instructors || [];
-    expect(instructors.filter(leaksSecret)).toEqual([]);
+    expect(res.status).toBe(400);
   });
 });
 
@@ -147,9 +142,7 @@ describe('Attack 4: $where server-side JavaScript injection', () => {
       .get('/api/instructors/search')
       .query({ $where: 'this.password.length > 10' });
 
-    expect(res.status).toBe(200);
-    const instructors = res.body.instructors || [];
-    expect(instructors.filter(leaksSecret)).toEqual([]);
+    expect(res.status).toBe(400);
   });
 
   test("?$where=apiKey.indexOf('sk_live') leaks no secrets", async () => {
@@ -157,9 +150,7 @@ describe('Attack 4: $where server-side JavaScript injection', () => {
       .get('/api/instructors/search')
       .query({ $where: "this.apiKey && this.apiKey.indexOf('sk_live') === 0" });
 
-    expect(res.status).toBe(200);
-    const instructors = res.body.instructors || [];
-    expect(instructors.filter(leaksSecret)).toEqual([]);
+    expect(res.status).toBe(400);
   });
 });
 
