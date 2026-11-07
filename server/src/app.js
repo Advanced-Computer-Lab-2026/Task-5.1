@@ -1,6 +1,7 @@
 import express from 'express';
 import morgan from 'morgan';
 import cors from 'cors';
+import mongoSanitize from 'express-mongo-sanitize';
 import authRoutes from './routes/auth.js';
 import reviewRoutes from './routes/reviews.js';
 import userRoutes from './routes/users.js';
@@ -11,6 +12,11 @@ const app = express();
 app.use(morgan('dev'));
 app.use(cors({ origin: 'http://localhost:5175', credentials: false }));
 app.use(express.json());
+// Strip keys that start with `$` or contain `.` from req.body / req.query /
+// req.params, so clients can never smuggle MongoDB operators ($ne, $gt,
+// $regex, $where, ...) into a query. This is a global, route-agnostic guard;
+// per-route Joi schemas (see controllers) additionally enforce shape and type.
+app.use(mongoSanitize());
 
 app.get('/api/health', (req, res) => res.json({ ok: true }));
 
