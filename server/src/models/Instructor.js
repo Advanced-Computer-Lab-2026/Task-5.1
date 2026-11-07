@@ -1,26 +1,41 @@
 import mongoose from 'mongoose';
+import bcrypt from 'bcryptjs';
 
 // Instructor Portal account.
 //
-// NOTE (security lab): this model is intentionally insecure. Passwords are
-// stored in PLAINTEXT (never do this in real code) so that the NoSQL injection
-// lab can demonstrate blind $regex password extraction. The apiKey / private
-// contact fields are "trophy" data that filter-injection attacks can leak.
+// SECURITY: passwords are stored as bcrypt hashes (pre('save') hook below),
+// and the hash is excluded from all query results unless explicitly selected
+// with .select('+password') — used only by the login controller to compare.
 const instructorSchema = new mongoose.Schema(
   {
     name: { type: String, required: true },
     username: { type: String, required: true, unique: true, trim: true },
-    // ⚠️ VULNERABLE (lab): plaintext password, no bcrypt hashing.
-    password: { type: String, required: true },
+    password: { type: String, required: true, select: false },
     department: { type: String },
     role: { type: String, default: 'instructor' }, // 'instructor' | 'superadmin'
 
-    // Sensitive "trophy" fields the directory hides but injection can leak.
+    // Sensitive fields: never returned by directory/search endpoints.
     apiKey: { type: String },
     privateEmail: { type: String },
     privatePhone: { type: String }
   },
   { timestamps: true }
 );
+
+// Hash the plain-text password before it is persisted.
+instructorSchema.pre('save', async function (next) {
+  if (!this.isModified('password')) return next();
+  try {
+    this.password = await bcrypt.hash(this.password, 10);
+    next();
+  } catch (err) {
+    next(err);
+  }
+});
+
+// Constant-time-ish comparison helper used by the login controller.
+instructorSchema.methods.comparePassword = function (plain) {
+  return bcrypt.compare(plain, this.password);
+};
 
 export const Instructor = mongoose.model('Instructor', instructorSchema);
