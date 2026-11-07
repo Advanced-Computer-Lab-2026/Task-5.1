@@ -11,12 +11,14 @@
 // The suite therefore exercises each project's real behavior with identical code.
 
 import mongoose from 'mongoose';
+import { MongoMemoryServer } from 'mongodb-memory-server';
 import dotenv from 'dotenv';
 import { fileURLToPath } from 'node:url';
 import { Instructor } from '../../src/models/Instructor.js';
 
 dotenv.config({ path: fileURLToPath(new URL('../../.env', import.meta.url)) });
 
+let mongod;
 
 // The portal accounts under test. The `admin` superadmin is the high-value
 // target holding the trophy fields (apiKey / private contact info).
@@ -69,14 +71,17 @@ export const SEED = [
 export const SECRET_FIELDS = ['password', 'apiKey', 'privateEmail', 'privatePhone'];
 
 export async function startDb() {
-  if (!process.env.MONGO_URI) {
-    throw new Error('MONGO_URI is missing. Add it to server/.env before running the instructor tests.');
+  if (process.env.MONGO_URI) {
+    await mongoose.connect(process.env.MONGO_URI, { autoIndex: true });
+    return;
   }
-  await mongoose.connect(process.env.MONGO_URI, { autoIndex: true });
+  mongod = await MongoMemoryServer.create();
+  await mongoose.connect(mongod.getUri(), { autoIndex: true });
 }
 
 export async function stopDb() {
   await mongoose.disconnect();
+  if (mongod) await mongod.stop();
 }
 
 export async function seed() {
