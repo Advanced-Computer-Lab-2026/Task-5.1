@@ -4,13 +4,12 @@ import {
   getDirectory,
   searchInstructors
 } from '../controllers/instructorController.js';
+import { validate, loginSchema, searchSchema } from '../validators/instructor.js';
 
 const router = Router();
 
-// The Instructor Portal has its own (naive, vulnerable) login — it does NOT use
-// the JWT requireAuth middleware. That is intentional for the lab.
-router.post('/login', loginInstructor);
+router.post('/login', validate(loginSchema), loginInstructor);
 router.get('/', getDirectory);
-router.get('/search', searchInstructors);
+router.get('/search', validate(searchSchema, 'query'), searchInstructors);
 
 export default router;
