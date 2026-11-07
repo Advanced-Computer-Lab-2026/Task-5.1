@@ -7,7 +7,7 @@
   ],
   "scripts": {
     "install:all": "npm --workspaces install",
-    "dev": "concurrently -n server,client -c blue,magenta \"npm:dev --workspace server\" \"npm:dev --workspace client\""
+    "dev": "concurrently -n server,client -c blue,magenta \"npm --prefix server run dev\" \"npm --prefix client run dev\""
   },
   "devDependencies": {
     "concurrently": "^8.2.2"

@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import { sanitizeInstructorInput } from '../middleware/instructorInput.js';
 import {
   loginInstructor,
   getDirectory,
@@ -7,8 +8,9 @@ import {
 
 const router = Router();
 
-// The Instructor Portal has its own (naive, vulnerable) login — it does NOT use
-// the JWT requireAuth middleware. That is intentional for the lab.
+router.use(sanitizeInstructorInput);
+
+// The instructor portal is separate from student JWT authentication.
 router.post('/login', loginInstructor);
 router.get('/', getDirectory);
 router.get('/search', searchInstructors);

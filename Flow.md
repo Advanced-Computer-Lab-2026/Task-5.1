@@ -1,5 +1,10 @@
 # NoSQL Injection Lab — Instructor Portal
 
+> This walkthrough describes the original vulnerable implementation. After the
+> security fix, operator requests should return **400**, not the success
+> responses shown below. See `SECURITY.md` for implementation and verification
+> details, including which checks have actually been run locally.
+
 This walkthrough shows you how to attack the **Instructor Portal** of the Course
 Review Board and, step by step, *why* each attack works. You will:
 
