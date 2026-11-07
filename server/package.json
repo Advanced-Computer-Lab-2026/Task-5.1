@@ -6,7 +6,8 @@
     "dev": "nodemon src/index.js",
     "start": "node src/index.js",
     "seed:instructors": "node src/seed/instructors.js",
-"test": "cross-env NODE_OPTIONS=--experimental-vm-modules jest --runInBand"  },
+    "test": "cross-env NODE_OPTIONS=--experimental-vm-modules jest --runInBand"
+  },
   "jest": {
     "testEnvironment": "node",
     "testMatch": [
@@ -25,6 +26,7 @@
     "morgan": "^1.10.0"
   },
   "devDependencies": {
+    "cross-env": "^10.1.0",
     "jest": "^29.7.0",
     "mongodb-memory-server": "^9.5.0",
     "nodemon": "^3.1.0",
