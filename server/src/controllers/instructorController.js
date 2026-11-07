@@ -9,7 +9,7 @@ const loginSchema = Joi.object({
 
 const searchSchema = Joi.object({
   name: Joi.string().trim().max(100).allow('').optional()
-}).unknown(false);
+}).unknown(true);
 
 function publicProfile(doc) {
   return {
@@ -56,6 +56,8 @@ export async function getDirectory(req, res, next) {
 // GET /api/instructors/search
 export async function searchInstructors(req, res, next) {
   try {
+    // Other query parameters are deliberately ignored. Only the validated
+    // `name` value is ever used to build a database filter.
     const { value, error } = searchSchema.validate(req.query);
     if (error) return res.status(400).json({ message: 'Only a string name query is supported' });
 
