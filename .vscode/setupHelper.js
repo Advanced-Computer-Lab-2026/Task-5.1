@@ -78,7 +78,7 @@ export const SEED = [
 export const SECRET_FIELDS = ['password', 'apiKey', 'privateEmail', 'privatePhone'];
 
 export async function startDb() {
-  mongod = await MongoMemoryServer.create();
+  mongod = await MongoMemoryServer.create({ instance: { storageEngine: 'wiredTiger' } });
   await mongoose.connect(mongod.getUri(), { autoIndex: true });
 }
 

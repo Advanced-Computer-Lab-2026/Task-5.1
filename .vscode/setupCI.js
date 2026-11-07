@@ -9,7 +9,9 @@ on: [push, pull_request]
 
 jobs:
   test:
-    runs-on: ubuntu-22.04          # 22.04 has libssl1.1 for mongod 6.0.x
+    runs-on: ubuntu-22.04
+    env:
+      MONGOMS_VERSION: 7.0.14
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -20,7 +22,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ~/.cache/mongodb-binaries
-          key: mongodb-memory-server-6.0.14-\${{ runner.os }}
+          key: mongodb-memory-server-7.0.14-\${{ runner.os }}
       - run: npm ci                 # installs the server+client workspaces
       - run: npm test --workspace server`;
 

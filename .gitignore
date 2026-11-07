@@ -1,5 +1,7 @@
 # Node.js dependencies
 node_modules/
+.npm-cache/
+.cache/
 
 # Build artifacts
 build/
