@@ -1,11 +1,14 @@
+
 import dotenv from 'dotenv';
-dotenv.config();
 import mongoose from 'mongoose';
+
 import { connectDB } from '../config/db.js';
 import { Instructor } from '../models/Instructor.js';
 
-// Seed data for the Instructor Portal NoSQL injection lab.
-// Passwords are plaintext ON PURPOSE (see Instructor model / Flow.md).
+dotenv.config({
+  path: new URL('../../.env', import.meta.url)
+});
+
 const instructors = [
   {
     name: 'Prof. Alice Smith',
@@ -35,7 +38,6 @@ const instructors = [
     privatePhone: '+1-555-0103'
   },
   {
-    // The high-value target: the only superadmin, holding the API key.
     name: 'Portal Administrator',
     username: 'admin',
     password: 'S3cr3t-Admin-Pw!',
@@ -48,19 +50,30 @@ const instructors = [
 ];
 
 async function run() {
-  await connectDB();
-  await Instructor.deleteMany({});
-  const created = await Instructor.insertMany(instructors);
-  console.log(`Seeded ${created.length} instructor(s):`);
-  for (const i of created) {
-    console.log(`  - ${i.username} (${i.role})`);
+  try {
+    await connectDB();
+
+    // For the disposable lab database only.
+    // The model automatically hashes passwords.
+    await Instructor.deleteMany({});
+
+    const created = await Instructor.insertMany(instructors);
+
+    console.log(`Seeded ${created.length} instructor(s):`);
+
+    for (const instructor of created) {
+      console.log(
+        `  - ${instructor.username} (${instructor.role})`
+      );
+    }
+
+    console.log('Done.');
+  } finally {
+    await mongoose.disconnect();
   }
-  await mongoose.disconnect();
-  console.log('Done.');
-  process.exit(0);
 }
 
 run().catch((err) => {
   console.error('Seed failed:', err);
-  process.exit(1);
+  process.exitCode = 1;
 });
